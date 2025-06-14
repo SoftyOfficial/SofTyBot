@@ -48,44 +48,5 @@ async def code_check(interaction, code):
             embed = nextcord.Embed(title="Code expired", color=0xe3382c)
             await interaction.followup.send(embed=embed)
     
-    print(data)
-
-
-@client.slash_command(name="login")
-async def login(interaction):
-    global embed
-    embed = nextcord.Embed(title="loading", color=0x29a6d8)
-    loading = await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    if str(interaction.user.id) in json.load(open("logins.json", "r")):
-      database = json.load(open("logins.json", "r"))[str(interaction.user.id)]
-      token = requests.post("https://account-public-service-prod.ol.epicgames.com/account/api/oauth/token", headers={"Authorization":"basic OThmN2U0MmMyZTNhNGY4NmE3NGViNDNmYmI0MWVkMzk6MGEyNDQ5YTItMDAxYS00NTFlLWFmZWMtM2U4MTI5MDFjNGQ3"}, data={"grant_type":"device_auth", "account_id":database["account_id"], "device_id":database["device_id"], "secret":database["secret"]}).json()
-      embed = nextcord.Embed(title=f"you are logged in as **{token['displayName']}**", color=0x29a6d8)
-      await loading.edit(embed=embed)
-    else:
-      token = requests.post("https://account-public-service-prod.ol.epicgames.com/account/api/oauth/token", headers={"Authorization":"basic OThmN2U0MmMyZTNhNGY4NmE3NGViNDNmYmI0MWVkMzk6MGEyNDQ5YTItMDAxYS00NTFlLWFmZWMtM2U4MTI5MDFjNGQ3"}, data={"grant_type":"client_credentials"}).json()
-      req = requests.post("https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/deviceAuthorization", headers={"Authorization":f"bearer {token['access_token']}"}, data={"prompt":"login"}).json()
-      embed = nextcord.Embed(title="Account login", description="1.Click the `Login` button below and login into your account.\n2.Confirm the prompt.\n3.Click the `Done` button below, the bot continues.", color=0x29a6d8)
-      button_login = nextcord.ui.Button(label="Login", style=nextcord.ButtonStyle.link, url=req["verification_uri_complete"])
-      button_done = nextcord.ui.Button(label="Done", style=nextcord.ButtonStyle.grey)
-      async def button_done_callback(i):
-        await i.response.defer()
-        token = requests.post("https://account-public-service-prod.ol.epicgames.com/account/api/oauth/token", headers={"Authorization":"basic OThmN2U0MmMyZTNhNGY4NmE3NGViNDNmYmI0MWVkMzk6MGEyNDQ5YTItMDAxYS00NTFlLWFmZWMtM2U4MTI5MDFjNGQ3"}, data={"grant_type":"device_code", "device_code":req["device_code"]}).json()
-        if "errorMessage" in token:
-          embed_error = nextcord.Embed(title="prompt not confirmed", color=0xe3382c)
-          global embed
-          await loading.edit(embeds=[embed, embed_error])
-        else:
-          device_auth = requests.post(f"https://account-public-service-prod.ol.epicgames.com/account/api/public/account/{token['account_id']}/deviceAuth", headers={"Authorization":f"Bearer {token['access_token']}"}).json()
-          database = json.load(open("logins.json", "r"))
-          database[str(i.user.id)] = {"device_id":device_auth["deviceId"], "account_id":device_auth["accountId"], "secret":device_auth["secret"]}
-          json.dump(database, open("logins.json", "w"), indent=4)
-          embed = nextcord.Embed(title=f"you are logged in as **{token['displayName']}**", color=0x29a6d8)
-          await loading.edit(embeds=[embed], view=None)
-      button_done.callback = button_done_callback
-      view = nextcord.ui.View()
-      view.add_item(button_login)
-      view.add_item(button_done)
-      await loading.edit(embed=embed, view=view)
 
 client.run(TOKEN)
